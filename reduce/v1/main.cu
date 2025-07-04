@@ -3,7 +3,7 @@
 
 using PER_THREAD_BLOCK = 256;
 
-__global__ void reduce(int *input, int *output, int n) {
+__global__ void reduce(float *input, float *output, int n) {
     int tid = threadIdx.x;
     int bid = blockIdx.x;
     input = input + bid * blockDim.x;
@@ -25,13 +25,13 @@ bool check_equal(float a, float b) {
 
 int main() {
     const int N=32*1024*1024;
-    float *input = (float *)malloc(n * sizeof(float));
+    float *input = (float *)malloc(N * sizeof(float));
 
-    int block_num = n / PER_THREAD_BLOCK;
+    int block_num = N / PER_THREAD_BLOCK;
     float *cpu_output = (float *)malloc(block_num * sizeof(float));
     float *output = (float *)malloc(block_num * sizeof(float));
 
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < N; i++) {
         input[i] = i + 0.1;
     }
     for (int i = 0; i < block_num; i++) {
@@ -41,17 +41,17 @@ int main() {
         }
     }
 
-    int *d_input, *d_output;
-    cudaMalloc((void **)&d_input, n * sizeof(int));
-    cudaMalloc((void **)&d_output, n * sizeof(int));
+    float *d_input, *d_output;
+    cudaMalloc((void **)&d_input, N * sizeof(float));
+    cudaMalloc((void **)&d_output, block_num * sizeof(float));
 
-    cudaMemcpy(d_input, input, n * sizeof(int), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_output, output, n * sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_input, input, N * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(d_output, output, block_num * sizeof(float), cudaMemcpyHostToDevice);
     dim3 grid(block_num);
     dim3 block(PER_THREAD_BLOCK);
 
-    reduce<<<grid, block>>>(d_input, d_output, n);
-    cudaMemcpy(output, d_output, n * sizeof(int), cudaMemcpyDeviceToHost);
+    reduce<<<grid, block>>>(d_input, d_output, N);
+    cudaMemcpy(output, d_output, block_num * sizeof(float), cudaMemcpyDeviceToHost);
 
     bool is_equal = true;
     for (int i = 0; i < block_num; i++) {
