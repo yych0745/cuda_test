@@ -32,7 +32,11 @@ int main() {
     float *output = (float *)malloc(block_num * sizeof(float));
 
     for (int i = 0; i < N; i++) {
+<<<<<<< HEAD
         input[i] = 1.0;
+=======
+        input[i] = i + 0.1;
+>>>>>>> f27810a66702dd9d383d9eba840e9761313baa90
     }
     for (int i = 0; i < block_num; i++) {
         cpu_output[i] = 0;
