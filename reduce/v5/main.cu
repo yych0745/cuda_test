@@ -3,20 +3,25 @@
 
 const int PER_THREAD_BLOCK = 256;
 
+// shared memory
 __global__ void reduce(float *input, float *output, int n) {
     int tid = threadIdx.x;
     int bid = blockIdx.x;
-    input = input + bid * blockDim.x;
-    for (int i = 1; i < PER_THREAD_BLOCK; i *= 2) {
-        if (tid % (2 * i) == 0) {
-            input[tid] += input[tid + i];
-        }
+    __shared__ float s_input[PER_THREAD_BLOCK];
+    input = input + bid * blockDim.x * 2;
+    s_input[tid] = input[tid] + input[tid + PER_THREAD_BLOCK];
+    __syncthreads();
+    for (int i = PER_THREAD_BLOCK / 2; i > 0; i /= 2) {
+        if (tid < i) {
+            s_input[tid] += s_input[tid + i];
+        } 
         __syncthreads();
     }
     if (tid == 0) {
-        output[bid] = input[0];
+        output[bid] = s_input[0];
     }
 }
+
 
 bool check_equal(float a, float b) {
     return (a - b) < 1e-6;
@@ -27,7 +32,7 @@ int main() {
     const int N=32*1024*1024;
     float *input = (float *)malloc(N * sizeof(float));
 
-    int block_num = N / PER_THREAD_BLOCK;
+    int block_num = N / PER_THREAD_BLOCK / 2;
     float *cpu_output = (float *)malloc(block_num * sizeof(float));
     float *output = (float *)malloc(block_num * sizeof(float));
 
